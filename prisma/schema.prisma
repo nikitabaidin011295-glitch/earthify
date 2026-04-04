@@ -1,8 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id      Int       @id @default(autoincrement())
+  name    String
+  users   User[]    @relation("TenantUsers")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  tenantId  Int
+  tenant    Tenant   @relation("TenantUsers", fields: [tenantId], references: [id])
+  guests    Guest[]   @relation("UserGuests")
+}
+
 model Guest {
-  id Int @id @default(autoincrement())
-  name String
-  email String @unique
-  messages Message[]
-  orders Order[]
-  @@unique([email, name])
+  id      Int      @id @default(autoincrement())
+  name    String
+  userId  Int
+  user    User     @relation("UserGuests", fields: [userId], references: [id])
+  orders  Order[]   @relation("GuestOrders")
+}
+
+model Order {
+  id        Int      @id @default(autoincrement())
+  total     Float
+  guestId   Int
+  guest     Guest     @relation("GuestOrders", fields: [guestId], references: [id])
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  content   String
+  guestId   Int
+  guest     Guest     @relation("GuestMessages", fields: [guestId], references: [id])
 }
