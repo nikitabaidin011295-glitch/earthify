@@ -124,6 +124,7 @@ model Guest {
   tableBookings TableBooking[]
   transactions  Transaction[]
   messages      Message[]
+  orders        Order[]
 
   @@unique([tenantId, phone])
   @@map("guests")
