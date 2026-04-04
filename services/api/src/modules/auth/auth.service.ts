@@ -3,6 +3,29 @@ import { prisma } from '../../lib/db'
 import { redis } from '../../lib/redis'
 import type { RegisterInput, LoginInput } from './auth.schema'
 
+const refreshTokenTtlSeconds = 30 * 24 * 60 * 60
+const refreshTokenFallbackStore = new Map<string, {
+  token: string
+  expiresAt: number
+}>()
+
+function saveRefreshTokenFallback(userId: string, token: string): void {
+  refreshTokenFallbackStore.set(userId, {
+    token,
+    expiresAt: Date.now() + refreshTokenTtlSeconds * 1000,
+  })
+}
+
+function readRefreshTokenFallback(userId: string): string | null {
+  const entry = refreshTokenFallbackStore.get(userId)
+  if (!entry) return null
+  if (entry.expiresAt <= Date.now()) {
+    refreshTokenFallbackStore.delete(userId)
+    return null
+  }
+  return entry.token
+}
+
 // Хелпер для slug
 function slugify(text: string): string {
   return text
@@ -107,25 +130,40 @@ export async function saveRefreshToken(
   userId: string,
   token: string
 ): Promise<void> {
-  // Зберегти в Redis на 30 днів
-  await redis.set(
-    `refresh:${userId}`,
-    token,
-    'EX',
-    30 * 24 * 60 * 60
-  )
+  try {
+    await redis.set(
+      `refresh:${userId}`,
+      token,
+      'EX',
+      refreshTokenTtlSeconds
+    )
+  } catch {
+    saveRefreshTokenFallback(userId, token)
+  }
 }
 
 export async function validateRefreshToken(
   userId: string,
   token: string
 ): Promise<boolean> {
-  const stored = await redis.get(`refresh:${userId}`)
-  return stored === token
+  try {
+    const stored = await redis.get(`refresh:${userId}`)
+    if (stored) return stored === token
+  } catch {
+    // Fall back to in-memory storage when Redis is unavailable.
+  }
+
+  return readRefreshTokenFallback(userId) === token
 }
 
 export async function deleteRefreshToken(userId: string): Promise<void> {
-  await redis.del(`refresh:${userId}`)
+  refreshTokenFallbackStore.delete(userId)
+
+  try {
+    await redis.del(`refresh:${userId}`)
+  } catch {
+    // Ignore Redis failures during logout.
+  }
 }
 
 export async function getMeService(userId: string) {
