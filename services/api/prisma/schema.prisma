@@ -7,10 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ══════════════════════════════
-// TENANTS (бізнеси)
-// ══════════════════════════════
-
 model Tenant {
   id             String   @id @default(uuid())
   name           String
@@ -50,10 +46,6 @@ model TenantLocation {
   @@map("tenant_locations")
 }
 
-// ══════════════════════════════
-// USERS
-// ══════════════════════════════
-
 model User {
   id           String   @id @default(uuid())
   tenantId     String   @map("tenant_id")
@@ -88,10 +80,6 @@ model Staff {
   @@map("staff")
 }
 
-// ══════════════════════════════
-// GUESTS
-// ══════════════════════════════
-
 model Guest {
   id             String    @id @default(uuid())
   tenantId       String    @map("tenant_id")
@@ -124,6 +112,7 @@ model Guest {
   tableBookings TableBooking[]
   transactions  Transaction[]
   messages      Message[]
+  orders        Order[]
 
   @@unique([tenantId, phone])
   @@map("guests")
@@ -141,10 +130,6 @@ model GuestVisit {
 
   @@map("guest_visits")
 }
-
-// ══════════════════════════════
-// HOTEL
-// ══════════════════════════════
 
 model Room {
   id           String         @id @default(uuid())
@@ -210,10 +195,6 @@ model RoomCharge {
   @@map("room_charges")
 }
 
-// ══════════════════════════════
-// SERVICES (SPA / SALON)
-// ══════════════════════════════
-
 model Service {
   id          String   @id @default(uuid())
   tenantId    String   @map("tenant_id")
@@ -271,10 +252,6 @@ model Appointment {
   @@map("appointments")
 }
 
-// ══════════════════════════════
-// POOL
-// ══════════════════════════════
-
 model Membership {
   id          String     @id @default(uuid())
   guestId     String     @map("guest_id")
@@ -309,10 +286,6 @@ model PoolSession {
 
   @@map("pool_sessions")
 }
-
-// ══════════════════════════════
-// RESTAURANT
-// ══════════════════════════════
 
 model Table {
   id         String         @id @default(uuid())
@@ -384,10 +357,6 @@ model Order {
   @@map("orders")
 }
 
-// ══════════════════════════════
-// POS / TRANSACTIONS
-// ══════════════════════════════
-
 model Transaction {
   id            String   @id @default(uuid())
   tenantId      String   @map("tenant_id")
@@ -406,10 +375,6 @@ model Transaction {
   @@map("transactions")
 }
 
-// ══════════════════════════════
-// LOYALTY
-// ══════════════════════════════
-
 model LoyaltyEvent {
   id          String   @id @default(uuid())
   guestId     String   @map("guest_id")
@@ -422,10 +387,6 @@ model LoyaltyEvent {
 
   @@map("loyalty_events")
 }
-
-// ══════════════════════════════
-// MESSAGING
-// ══════════════════════════════
 
 model Message {
   id         String   @id @default(uuid())
@@ -445,23 +406,19 @@ model Message {
   @@map("messages")
 }
 
-// ══════════════════════════════
-// SUBSCRIPTIONS
-// ══════════════════════════════
-
 model Subscription {
-  id              String    @id @default(uuid())
-  tenantId        String    @map("tenant_id")
-  tenant          Tenant    @relation(fields: [tenantId], references: [id])
-  plan            String
-  modules         String[]
-  billingCycle    String    @default("monthly") @map("billing_cycle")
-  amount          Decimal
-  currency        String    @default("USD")
-  status          String    @default("trialing")
-  trialEndsAt     DateTime? @map("trial_ends_at")
+  id               String    @id @default(uuid())
+  tenantId         String    @map("tenant_id")
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+  plan             String
+  modules          String[]
+  billingCycle     String    @default("monthly") @map("billing_cycle")
+  amount           Decimal
+  currency         String    @default("USD")
+  status           String    @default("trialing")
+  trialEndsAt      DateTime? @map("trial_ends_at")
   currentPeriodEnd DateTime? @map("current_period_end")
-  createdAt       DateTime  @default(now()) @map("created_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
 
   @@map("subscriptions")
 }
