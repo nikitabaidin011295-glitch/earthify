@@ -10,10 +10,11 @@
   ],
   "scripts": {
     "dev": "turbo run dev",
-    "build": "turbo run build",
+    "build": "prisma migrate deploy --schema services/api/prisma/schema.prisma && turbo run build",
     "postbuild": "node -e \"const fs=require('fs');fs.cpSync('services/api/dist','dist',{recursive:true,force:true});\"",
     "start": "node dist/server.js",
     "db:migrate": "prisma migrate dev --schema services/api/prisma/schema.prisma",
+    "db:deploy": "prisma migrate deploy --schema services/api/prisma/schema.prisma",
     "db:generate": "prisma generate --schema services/api/prisma/schema.prisma"
   },
   "devDependencies": {
