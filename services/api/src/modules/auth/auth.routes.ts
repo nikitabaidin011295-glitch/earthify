@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify'
+import { Prisma } from '@prisma/client'
 import {
   registerSchema,
   loginSchema,
@@ -12,6 +13,25 @@ import {
   deleteRefreshToken,
   getMeService,
 } from './auth.service'
+
+function buildErrorPayload(err: unknown) {
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    return {
+      error: 'Помилка сервера',
+      details: err.message,
+      code: err.code,
+    }
+  }
+
+  if (err instanceof Error) {
+    return {
+      error: 'Помилка сервера',
+      details: err.message,
+    }
+  }
+
+  return { error: 'Помилка сервера' }
+}
 
 export async function authRoutes(fastify: FastifyInstance) {
   // POST /api/auth/register
@@ -62,7 +82,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         })
       }
       fastify.log.error(err)
-      return reply.status(500).send({ error: 'Помилка сервера' })
+      return reply.status(500).send(buildErrorPayload(err))
     }
   })
 
@@ -112,7 +132,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         })
       }
       fastify.log.error(err)
-      return reply.status(500).send({ error: 'Помилка сервера' })
+      return reply.status(500).send(buildErrorPayload(err))
     }
   })
 
