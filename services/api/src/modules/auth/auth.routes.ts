@@ -120,7 +120,7 @@ export async function authRoutes(fastify: FastifyInstance) {
   fastify.post('/refresh', async (request, reply) => {
     try {
       const { refreshToken } = refreshSchema.parse(request.body)
-      const decoded = fastify.jwt.verify(refreshToken) as any
+      const decoded = fastify.jwt.verify<{ userId: string }>(refreshToken)
 
       const valid = await validateRefreshToken(
         decoded.userId,
@@ -152,7 +152,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     '/logout',
     { onRequest: [fastify.authenticate] },
     async (request, reply) => {
-      const user = request.user as any
+      const user = request.user
       await deleteRefreshToken(user.userId)
       return reply.send({ message: 'Вийшли успішно' })
     }
@@ -164,7 +164,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     { onRequest: [fastify.authenticate] },
     async (request, reply) => {
       try {
-        const user = request.user as any
+        const user = request.user
         const me = await getMeService(user.userId)
 
         return reply.send({

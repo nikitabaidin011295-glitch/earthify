@@ -10,8 +10,8 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "db:migrate": "prisma migrate dev",
-    "db:generate": "prisma generate"
+    "db:migrate": "prisma migrate dev --schema services/api/prisma/schema.prisma",
+    "db:generate": "prisma generate --schema services/api/prisma/schema.prisma"
   },
   "devDependencies": {
     "turbo": "^2.0.0",
