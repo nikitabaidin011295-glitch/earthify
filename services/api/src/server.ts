@@ -27,6 +27,11 @@ app.get('/health', async () => ({
   service: 'earthify-api'
 }))
 
+app.get('/', async () => ({
+  message: 'Earthify API is running',
+  health: '/health'
+}))
+
 app.register(authRoutes, { prefix: '/api/auth' })
 
 const start = async () => {
