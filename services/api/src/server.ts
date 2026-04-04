@@ -1,45 +1,36 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import jwt from '@fastify/jwt'
-import { authRoutes } from './modules/auth/auth.routes'
 
 const app = Fastify({ logger: true })
 
-app.register(cors, {
-  origin: true,
-  credentials: true,
-})
+app.register(cors, { origin: true, credentials: true })
 
 app.register(jwt, {
-  secret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
+  secret: process.env.JWT_SECRET || 'dev-secret'
 })
 
 app.decorate('authenticate', async (request: any, reply: any) => {
   try {
     await request.jwtVerify()
   } catch (err) {
-    reply.status(401).send({ error: 'Не авторизований' })
+    reply.status(401).send({ error: 'Unauthorized' })
   }
 })
 
-// Health check
 app.get('/health', async () => ({
   status: 'ok',
   timestamp: new Date().toISOString(),
   service: 'earthify-api',
-  version: '1.0.1',
+  routes: ['/api/auth/register', '/api/auth/login']
 }))
 
-// Auth routes
-app.register(authRoutes, { prefix: '/api/auth' })
+app.post('/api/auth/register', async (request, reply) => {
+  return reply.send({ message: 'Register endpoint working!', body: request.body })
+})
 
-// 404 handler
-app.setNotFoundHandler((request, reply) => {
-  reply.status(404).send({
-    error: 'Route not found',
-    method: request.method,
-    url: request.url,
-  })
+app.post('/api/auth/login', async (request, reply) => {
+  return reply.send({ message: 'Login endpoint working!', body: request.body })
 })
 
 const start = async () => {
