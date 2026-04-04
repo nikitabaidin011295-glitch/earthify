@@ -5,11 +5,8 @@ import { authRoutes } from './modules/auth/auth.routes'
 
 const app = Fastify({ logger: true })
 
-// Plugins
 app.register(cors, {
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || [
-    'http://localhost:3000',
-  ],
+  origin: true,
   credentials: true,
 })
 
@@ -17,7 +14,6 @@ app.register(jwt, {
   secret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
 })
 
-// Auth decorator
 app.decorate('authenticate', async (request: any, reply: any) => {
   try {
     await request.jwtVerify()
@@ -31,12 +27,21 @@ app.get('/health', async () => ({
   status: 'ok',
   timestamp: new Date().toISOString(),
   service: 'earthify-api',
+  version: '1.0.1',
 }))
 
-// Routes
+// Auth routes
 app.register(authRoutes, { prefix: '/api/auth' })
 
-// Start
+// 404 handler
+app.setNotFoundHandler((request, reply) => {
+  reply.status(404).send({
+    error: 'Route not found',
+    method: request.method,
+    url: request.url,
+  })
+})
+
 const start = async () => {
   try {
     const port = Number(process.env.PORT) || 8080
