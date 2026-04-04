@@ -8,12 +8,11 @@ export default function RegisterPage() {
     email: '',
     password: '',
     businessName: '',
-    businessType: 'hotel',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }))
   }
 
@@ -26,7 +25,10 @@ export default function RegisterPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          businessType: 'hotel',
+        }),
       })
       const data = await res.json()
 
@@ -96,34 +98,6 @@ export default function RegisterPage() {
               />
             </div>
           ))}
-
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ color: '#aaa', fontSize: '14px', display: 'block', marginBottom: '6px' }}>
-              Тип бізнесу
-            </label>
-            <select
-              name="businessType"
-              value={form.businessType}
-              onChange={handleChange}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                background: '#1a1a1a',
-                border: '1px solid #333',
-                borderRadius: '8px',
-                color: '#fff',
-                fontSize: '14px',
-                boxSizing: 'border-box',
-              }}
-            >
-              <option value="hotel">🏨 Готель</option>
-              <option value="spa">💆 СПА</option>
-              <option value="salon">💇 Салон краси</option>
-              <option value="pool">🏊 Басейн</option>
-              <option value="restaurant">🍽️ Ресторан</option>
-              <option value="cafe">☕ Кафе</option>
-            </select>
-          </div>
 
           {error && (
             <p style={{ color: '#ef4444', fontSize: '14px', marginBottom: '16px' }}>{error}</p>
