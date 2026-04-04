@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm install && npx prisma generate --schema services/api/prisma/schema.prisma && npm run build --workspace @earthify/api"
+buildCommand = "npm install && npx prisma migrate deploy --schema services/api/prisma/schema.prisma && npx prisma generate --schema services/api/prisma/schema.prisma && npm run build --workspace @earthify/api"
 
 [deploy]
 startCommand = "node services/api/dist/server.js"
