@@ -1,0 +1,467 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ══════════════════════════════
+// TENANTS (бізнеси)
+// ══════════════════════════════
+
+model Tenant {
+  id             String   @id @default(uuid())
+  name           String
+  slug           String   @unique
+  plan           String   @default("starter")
+  modulesEnabled String[] @map("modules_enabled")
+  settings       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  locations     TenantLocation[]
+  users         User[]
+  guests        Guest[]
+  staff         Staff[]
+  services      Service[]
+  subscriptions Subscription[]
+  messages      Message[]
+
+  @@map("tenants")
+}
+
+model TenantLocation {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  name      String
+  address   String
+  city      String   @default("")
+  phone     String   @default("")
+  timezone  String   @default("Europe/Kyiv")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  rooms     Room[]
+  tables    Table[]
+  resources Resource[]
+  menuItems MenuItem[]
+
+  @@map("tenant_locations")
+}
+
+// ══════════════════════════════
+// USERS
+// ══════════════════════════════
+
+model User {
+  id           String   @id @default(uuid())
+  tenantId     String   @map("tenant_id")
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String
+  name         String
+  phone        String   @default("")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+model Staff {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  locationId      String   @map("location_id")
+  name            String
+  specializations String[]
+  photoUrl        String?  @map("photo_url")
+  commissionPct   Decimal  @default(0) @map("commission_pct")
+  schedule        Json     @default("{}")
+  rating          Decimal  @default(5.0)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  appointments Appointment[]
+
+  @@map("staff")
+}
+
+// ══════════════════════════════
+// GUESTS
+// ══════════════════════════════
+
+model Guest {
+  id             String    @id @default(uuid())
+  tenantId       String    @map("tenant_id")
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+  name           String
+  phone          String
+  email          String    @default("")
+  birthDate      DateTime? @map("birth_date")
+  notes          String    @default("")
+  preferences    Json      @default("{}")
+  allergens      String[]
+  loyaltyPoints  Int       @default(0) @map("loyalty_points")
+  loyaltyLevel   String    @default("bronze") @map("loyalty_level")
+  paymentToken   String?   @map("payment_token")
+  telegramChatId String?   @map("telegram_chat_id")
+  viberUserId    String?   @map("viber_user_id")
+  instagramId    String?   @map("instagram_id")
+  facebookId     String?   @map("facebook_id")
+  tags           String[]
+  lastVisitAt    DateTime? @map("last_visit_at")
+  optOutSms      Boolean   @default(false) @map("opt_out_sms")
+  optOutAll      Boolean   @default(false) @map("opt_out_all")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  visits        GuestVisit[]
+  loyaltyEvents LoyaltyEvent[]
+  roomBookings  RoomBooking[]
+  appointments  Appointment[]
+  memberships   Membership[]
+  tableBookings TableBooking[]
+  transactions  Transaction[]
+  messages      Message[]
+
+  @@unique([tenantId, phone])
+  @@map("guests")
+}
+
+model GuestVisit {
+  id        String   @id @default(uuid())
+  guestId   String   @map("guest_id")
+  guest     Guest    @relation(fields: [guestId], references: [id])
+  tenantId  String   @map("tenant_id")
+  module    String
+  amount    Decimal  @default(0)
+  notes     String   @default("")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("guest_visits")
+}
+
+// ══════════════════════════════
+// HOTEL
+// ══════════════════════════════
+
+model Room {
+  id           String         @id @default(uuid())
+  locationId   String         @map("location_id")
+  location     TenantLocation @relation(fields: [locationId], references: [id])
+  number       String
+  floor        Int            @default(1)
+  type         String
+  capacity     Int            @default(2)
+  priceBase    Decimal        @map("price_base")
+  amenities    String[]
+  photos       String[]
+  status       String         @default("clean")
+  active       Boolean        @default(true)
+
+  bookings RoomBooking[]
+  charges  RoomCharge[]
+
+  @@map("rooms")
+}
+
+model RoomBooking {
+  id               String    @id @default(uuid())
+  tenantId         String    @map("tenant_id")
+  roomId           String    @map("room_id")
+  room             Room      @relation(fields: [roomId], references: [id])
+  guestId          String    @map("guest_id")
+  guest            Guest     @relation(fields: [guestId], references: [id])
+  checkIn          DateTime  @map("check_in") @db.Date
+  checkOut         DateTime  @map("check_out") @db.Date
+  guestsCount      Int       @default(1) @map("guests_count")
+  status           String    @default("confirmed")
+  channel          String    @default("direct")
+  totalAmount      Decimal   @map("total_amount")
+  paidAmount       Decimal   @default(0) @map("paid_amount")
+  paymentStatus    String    @default("pending") @map("payment_status")
+  liqpayOrderId    String?   @map("liqpay_order_id")
+  liqpayUrl        String?   @map("liqpay_url")
+  digitalKeyToken  String?   @map("digital_key_token")
+  digitalKeyActive Boolean   @default(false) @map("digital_key_active")
+  notes            String    @default("")
+  preCheckinData   Json?     @map("pre_checkin_data")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  charges      RoomCharge[]
+  appointments Appointment[]
+  orders       Order[]
+
+  @@map("room_bookings")
+}
+
+model RoomCharge {
+  id          String      @id @default(uuid())
+  bookingId   String      @map("booking_id")
+  booking     RoomBooking @relation(fields: [bookingId], references: [id])
+  roomId      String      @map("room_id")
+  room        Room        @relation(fields: [roomId], references: [id])
+  type        String
+  description String
+  amount      Decimal
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  @@map("room_charges")
+}
+
+// ══════════════════════════════
+// SERVICES (SPA / SALON)
+// ══════════════════════════════
+
+model Service {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  locationId  String   @map("location_id")
+  module      String
+  name        String
+  description String   @default("")
+  durationMin Int      @map("duration_min")
+  price       Decimal
+  category    String   @default("")
+  photoUrl    String?  @map("photo_url")
+  active      Boolean  @default(true)
+
+  appointments Appointment[]
+
+  @@map("services")
+}
+
+model Resource {
+  id         String         @id @default(uuid())
+  locationId String         @map("location_id")
+  location   TenantLocation @relation(fields: [locationId], references: [id])
+  module     String
+  name       String
+  active     Boolean        @default(true)
+
+  appointments Appointment[]
+
+  @@map("resources")
+}
+
+model Appointment {
+  id            String       @id @default(uuid())
+  tenantId      String       @map("tenant_id")
+  guestId       String       @map("guest_id")
+  guest         Guest        @relation(fields: [guestId], references: [id])
+  staffId       String?      @map("staff_id")
+  staff         Staff?       @relation(fields: [staffId], references: [id])
+  resourceId    String?      @map("resource_id")
+  resource      Resource?    @relation(fields: [resourceId], references: [id])
+  serviceId     String       @map("service_id")
+  service       Service      @relation(fields: [serviceId], references: [id])
+  roomBookingId String?      @map("room_booking_id")
+  roomBooking   RoomBooking? @relation(fields: [roomBookingId], references: [id])
+  startAt       DateTime     @map("start_at")
+  endAt         DateTime     @map("end_at")
+  status        String       @default("confirmed")
+  paymentStatus String       @default("pending") @map("payment_status")
+  liqpayUrl     String?      @map("liqpay_url")
+  amount        Decimal
+  notes         String       @default("")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  @@map("appointments")
+}
+
+// ══════════════════════════════
+// POOL
+// ══════════════════════════════
+
+model Membership {
+  id          String     @id @default(uuid())
+  guestId     String     @map("guest_id")
+  guest       Guest      @relation(fields: [guestId], references: [id])
+  tenantId    String     @map("tenant_id")
+  locationId  String     @map("location_id")
+  type        String
+  visitsTotal Int        @map("visits_total")
+  visitsUsed  Int        @default(0) @map("visits_used")
+  validFrom   DateTime   @map("valid_from") @db.Date
+  validUntil  DateTime   @map("valid_until") @db.Date
+  qrToken     String     @unique @map("qr_token")
+  status      String     @default("active")
+  amountPaid  Decimal    @map("amount_paid")
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  sessions PoolSession[]
+
+  @@map("memberships")
+}
+
+model PoolSession {
+  id           String     @id @default(uuid())
+  membershipId String     @map("membership_id")
+  membership   Membership @relation(fields: [membershipId], references: [id])
+  guestId      String     @map("guest_id")
+  slotStart    DateTime   @map("slot_start")
+  slotEnd      DateTime   @map("slot_end")
+  lockerCode   String?    @map("locker_code")
+  checkedIn    Boolean    @default(false) @map("checked_in")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@map("pool_sessions")
+}
+
+// ══════════════════════════════
+// RESTAURANT
+// ══════════════════════════════
+
+model Table {
+  id         String         @id @default(uuid())
+  locationId String         @map("location_id")
+  location   TenantLocation @relation(fields: [locationId], references: [id])
+  number     String
+  capacity   Int
+  zone       String         @default("main")
+  qrToken    String         @unique @map("qr_token")
+  status     String         @default("free")
+  active     Boolean        @default(true)
+
+  bookings TableBooking[]
+  orders   Order[]
+
+  @@map("tables")
+}
+
+model TableBooking {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  tableId     String   @map("table_id")
+  table       Table    @relation(fields: [tableId], references: [id])
+  guestId     String   @map("guest_id")
+  guest       Guest    @relation(fields: [guestId], references: [id])
+  date        DateTime @db.Date
+  time        String
+  guestsCount Int      @map("guests_count")
+  status      String   @default("confirmed")
+  allergens   String[]
+  notes       String   @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("table_bookings")
+}
+
+model MenuItem {
+  id          String         @id @default(uuid())
+  locationId  String         @map("location_id")
+  location    TenantLocation @relation(fields: [locationId], references: [id])
+  name        String
+  description String         @default("")
+  price       Decimal
+  category    String
+  allergens   String[]
+  available   Boolean        @default(true)
+  sortOrder   Int            @default(0) @map("sort_order")
+
+  @@map("menu_items")
+}
+
+model Order {
+  id            String       @id @default(uuid())
+  locationId    String       @map("location_id")
+  tableId       String?      @map("table_id")
+  table         Table?       @relation(fields: [tableId], references: [id])
+  guestId       String?      @map("guest_id")
+  guest         Guest?       @relation(fields: [guestId], references: [id])
+  roomBookingId String?      @map("room_booking_id")
+  roomBooking   RoomBooking? @relation(fields: [roomBookingId], references: [id])
+  items         Json
+  subtotal      Decimal
+  tip           Decimal      @default(0)
+  total         Decimal
+  status        String       @default("pending")
+  paymentMethod String?      @map("payment_method")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  @@map("orders")
+}
+
+// ══════════════════════════════
+// POS / TRANSACTIONS
+// ══════════════════════════════
+
+model Transaction {
+  id            String   @id @default(uuid())
+  tenantId      String   @map("tenant_id")
+  guestId       String?  @map("guest_id")
+  guest         Guest?   @relation(fields: [guestId], references: [id])
+  locationId    String   @map("location_id")
+  module        String
+  amount        Decimal
+  discount      Decimal  @default(0)
+  loyaltyUsed   Int      @default(0) @map("loyalty_used")
+  method        String
+  liqpayOrderId String?  @map("liqpay_order_id")
+  status        String   @default("pending")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("transactions")
+}
+
+// ══════════════════════════════
+// LOYALTY
+// ══════════════════════════════
+
+model LoyaltyEvent {
+  id          String   @id @default(uuid())
+  guestId     String   @map("guest_id")
+  guest       Guest    @relation(fields: [guestId], references: [id])
+  tenantId    String   @map("tenant_id")
+  points      Int
+  type        String
+  description String   @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("loyalty_events")
+}
+
+// ══════════════════════════════
+// MESSAGING
+// ══════════════════════════════
+
+model Message {
+  id         String   @id @default(uuid())
+  tenantId   String   @map("tenant_id")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  guestId    String   @map("guest_id")
+  guest      Guest    @relation(fields: [guestId], references: [id])
+  channel    String
+  direction  String
+  body       String
+  isAuto     Boolean  @default(false) @map("is_auto")
+  templateId String?  @map("template_id")
+  status     String   @default("sent")
+  externalId String?  @map("external_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("messages")
+}
+
+// ══════════════════════════════
+// SUBSCRIPTIONS
+// ══════════════════════════════
+
+model Subscription {
+  id              String    @id @default(uuid())
+  tenantId        String    @map("tenant_id")
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  plan            String
+  modules         String[]
+  billingCycle    String    @default("monthly") @map("billing_cycle")
+  amount          Decimal
+  currency        String    @default("USD")
+  status          String    @default("trialing")
+  trialEndsAt     DateTime? @map("trial_ends_at")
+  currentPeriodEnd DateTime? @map("current_period_end")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@map("subscriptions")
+}
