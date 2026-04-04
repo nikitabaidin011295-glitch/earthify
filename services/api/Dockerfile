@@ -4,11 +4,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-COPY . .
+COPY prisma ./prisma/
+RUN npx prisma generate
 
-RUN npx prisma generate --schema=./prisma/schema.prisma
+COPY . .
 RUN npm run build
 
 EXPOSE $PORT
-
-CMD npx prisma migrate deploy --schema=./prisma/schema.prisma && node dist/server.js
+CMD npx prisma migrate deploy && node dist/server.js
