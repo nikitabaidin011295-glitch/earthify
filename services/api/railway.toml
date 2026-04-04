@@ -6,4 +6,3 @@ buildCommand = "npm install && npx prisma generate && npm run build"
 startCommand = "node dist/server.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 60
- 
