@@ -21,7 +21,7 @@ app.register(cors, {
     if (!origin) return cb(null, true)
     if (allowedOrigins.length === 0) return cb(null, true)
     if (allowedOrigins.includes(origin)) return cb(null, true)
-    return cb(new Error('Origin not allowed'), false)
+    return cb(null, false)
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
