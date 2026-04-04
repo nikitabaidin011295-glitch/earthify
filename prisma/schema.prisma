@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ══════════════════════════════
+// TENANTS (бізнеси)
+// ══════════════════════════════
+
+model Tenant {
+  id             String   @id @default(uuid())
+  name           String
+  slug           String   @unique
+  plan           String   @default("starter")
+  modulesEnabled String[] @map("modules_enabled")
+  settings       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  locations     TenantLocation[]
+  users         User[]
+  guests        Guest[]
+  staff         Staff[]
+  services      Service[]
+  subscriptions Subscription[]
+  messages      Message[]
+
+  @@map("tenants")
+}
+
+model TenantLocation {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  name      String
+  address   String
+  city      String   @default("")
+  phone     String   @default("")
+  timezone  String   @default("Europe/Kyiv")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  rooms     Room[]
+  tables    Table[]
+  resources Resource[]
+  menuItems MenuItem[]
+
+  @@map("tenant_locations")
+}
+
+// ══════════════════════════════
+// USERS
+// ══════════════════════════════
+
+model User {
+  id           String   @id @default(uuid())
+  tenantId     String   @map("tenant_id")
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String
+  name         String
+  phone        String   @default("")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+model Staff {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  locationId      String   @map("location_id")
+  name            String
+  specializations String[]
+  photoUrl        String?  @map("photo_url")
+  commissionPct   Decimal  @default(0) @map("commission_pct")
+  schedule        Json     @default("{}")
+  rating          Decimal  @default(5.0)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  appointments Appointment[]
+
+  @@map("staff")
+}
+
+// ══════════════════════════════
+// GUESTS
+// ══════════════════════════════
+
+model Guest {
+  id             String    @id @default(uuid())
+  tenantId       String    @map("tenant_id")
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+  name           String
+  phone          String
+  email          String    @default("")
+  birthDate      DateTime? @map("birth_date")
+  notes          String    @default("")
+  preferences    Json      @default("{}")
+  allergens      String[]
+  loyaltyPoints  Int       @default(0) @map("loyalty_points")
+  loyaltyLevel   String    @default("bronze") @map("loyalty_level")
+  paymentToken   String?   @map("payment_token")
+  telegramChatId String?   @map("telegram_chat_id")
+  viberUserId    String?   @map("viber_user_id")
+  instagramId    String?   @map("instagram_id")
+  facebookId     String?   @map("facebook_id")
+  tags           String[]
+  lastVisitAt    DateTime? @map("last_visit_at")
+  optOutSms      Boolean   @default(false) @map("opt_out_sms")
+  optOutAll      Boolean   @default(false) @map("opt_out_all")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  visits        GuestVisit[]
+  loyaltyEvents LoyaltyEvent[]
+  roomBookings  RoomBooking[]
+  appointments  Appointment[]
+  memberships   Membership[]
+  tableBookings TableBooking[]
+  transactions  Transaction[]
+  messages      Message[]
+
+  @@unique([tenantId, phone])
+  @@map("guests")
+}
+
+model GuestVisit {
+  id        String   @id @default(uuid())
+  guestId   String   @map("guest_id")
+  guest     Guest    @relation(fields: [guestId], references: [id])
+  tenantId  String   @map("tenant_id")
+  module    String
+  amount    Decimal  @default(0)
+  notes     String   @default("")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("guest_visits")
+}
+
+// ══════════════════════════════
+// HOTEL
+// ══════════════════════════════
+
+model Room {
+  id           String         @id @default(uuid())
+  locationId   String         @map("location_id")
+  location     TenantLocation @relation(fields: [locationId], references: [id])
+  number       String
+  floor        Int            @default(1)
+  type         String
+  capacity     Int            @default(2)
