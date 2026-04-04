@@ -5,7 +5,9 @@ import jwt from '@fastify/jwt'
 import { authRoutes } from './modules/auth/auth.routes'
 
 const app = Fastify({ logger: true })
+
 const jwtSecret = process.env.JWT_SECRET
+
 const allowedOrigins = (process.env.CORS_ORIGIN || '')
   .split(',')
   .map((origin) => origin.trim())
@@ -17,8 +19,8 @@ if (!jwtSecret) {
 
 app.register(cors, {
   origin: (origin, cb) => {
-    // Allow server-to-server and CLI requests with no Origin header.
     if (!origin) return cb(null, true)
+    if (allowedOrigins.includes('*')) return cb(null, true)
     if (allowedOrigins.length === 0) return cb(null, true)
     if (allowedOrigins.includes(origin)) return cb(null, true)
     return cb(null, false)
@@ -27,6 +29,7 @@ app.register(cors, {
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 })
+
 app.register(jwt, {
   secret: jwtSecret
 })
