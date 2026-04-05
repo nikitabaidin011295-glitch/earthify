@@ -3,6 +3,8 @@ import { prisma } from '../../lib/db'
 import { redis } from '../../lib/redis'
 import type { RegisterInput, LoginInput } from './auth.schema'
 
+const ALL_MODULES = ['core', 'hotel', 'spa', 'salon', 'pool', 'restaurant', 'cafe']
+
 const refreshTokenTtlSeconds = 30 * 24 * 60 * 60
 const refreshTokenFallbackStore = new Map<string, {
   token: string
@@ -26,7 +28,6 @@ function readRefreshTokenFallback(userId: string): string | null {
   return entry.token
 }
 
-// Хелпер для slug
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -35,7 +36,6 @@ function slugify(text: string): string {
     .substring(0, 50)
 }
 
-// Генерація унікального slug
 async function generateUniqueSlug(name: string): Promise<string> {
   const base = slugify(name)
   let slug = base
@@ -50,7 +50,6 @@ async function generateUniqueSlug(name: string): Promise<string> {
 }
 
 export async function registerService(data: RegisterInput) {
-  // 1. Перевірити чи email вже є
   const existingUser = await prisma.user.findUnique({
     where: { email: data.email },
   })
@@ -58,18 +57,15 @@ export async function registerService(data: RegisterInput) {
     throw new Error('EMAIL_EXISTS')
   }
 
-  // 2. Хешувати пароль
   const passwordHash = await bcrypt.hash(data.password, 12)
 
-  // 3. Створити тенанта і власника в одній транзакції
   const result = await prisma.$transaction(async (tx) => {
-    // Створити тенанта
     const tenant = await tx.tenant.create({
       data: {
         name: data.businessName,
         slug: await generateUniqueSlug(data.businessName),
         plan: 'starter',
-        modulesEnabled: ['core', data.businessType],
+        modulesEnabled: ALL_MODULES,
         settings: {
           timezone: 'Europe/Kyiv',
           currency: 'UAH',
@@ -79,7 +75,6 @@ export async function registerService(data: RegisterInput) {
       },
     })
 
-    // Створити власника
     const user = await tx.user.create({
       data: {
         tenantId: tenant.id,
@@ -90,12 +85,11 @@ export async function registerService(data: RegisterInput) {
       },
     })
 
-    // Створити підписку (trial 14 днів)
     await tx.subscription.create({
       data: {
         tenantId: tenant.id,
         plan: 'starter',
-        modules: ['core', data.businessType],
+        modules: ALL_MODULES,
         amount: 0,
         currency: 'USD',
         status: 'trialing',
@@ -110,7 +104,6 @@ export async function registerService(data: RegisterInput) {
 }
 
 export async function loginService(data: LoginInput) {
-  // 1. Знайти користувача
   const user = await prisma.user.findUnique({
     where: { email: data.email },
     include: { tenant: true },
@@ -119,7 +112,6 @@ export async function loginService(data: LoginInput) {
   if (!user) throw new Error('INVALID_CREDENTIALS')
   if (!user.active) throw new Error('ACCOUNT_DISABLED')
 
-  // 2. Перевірити пароль
   const valid = await bcrypt.compare(data.password, user.passwordHash)
   if (!valid) throw new Error('INVALID_CREDENTIALS')
 
