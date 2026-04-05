@@ -1,4 +1,4 @@
-export default function HomePage() {
+﻿export default function HomePage() {
   return (
     <main style={{ fontFamily: 'Inter, system-ui, sans-serif', color: '#111', maxWidth: '900px', margin: '0 auto' }}>
 
